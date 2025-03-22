@@ -6,6 +6,7 @@ import io
 import subprocess
 from dotenv import load_dotenv
 import os
+import openpyxl
 import urllib.parse
 
 load_dotenv()
@@ -67,17 +68,27 @@ def get_emails(students_who_didnt_answer, student_map):
     for student in students_who_didnt_answer:
         if student in student_map:
             up_code = student_map[student]
-            email = f"{up_code}@up.pt"
+            email = f"up{up_code}@up.pt"
             emails.append(email)
     return emails
+def parse_excel(file_path):
+    df = pd.read_excel(file_path, sheet_name=None)
+    parsed_data = {}
+    for sheet_name, sheet_data in df.items():
+        parsed_data[sheet_name] = sheet_data.to_dict(orient='records')
+    return parsed_data
 
+excel_data = parse_excel('excel.xlsx')
+allowed_emails = [entry['Email'] for entry in excel_data['Sheet1'] if entry.get('Gostarias de receber um mail sexta de tarde caso não tenhas preenchido o forms?\n') == 'sim']
+print(allowed_emails)
 individual_students_who_didnt_answer = get_individual_students_who_didnt_answer()
 groups_who_didnt_answer = get_groups_who_didnt_answer()
 group_students_who_didnt_answer = get_group_students_who_didnt_answer(groups_who_didnt_answer)
 students_who_didnt_answer = individual_students_who_didnt_answer + group_students_who_didnt_answer
 student_up_map = fetch_student_map()
 emails = get_emails(students_who_didnt_answer, student_up_map)
-email_list = ", ".join(emails)
+filtered_emails = [email for email in emails if email in allowed_emails]
+email_list = ", ".join(filtered_emails)
 
 subject = "Não te esqueças de pi"
 body = "Olá, só para avisar que ainda não preencheste o forms semanal de PI. Podes preencher neste link: https://docs.google.com/forms/d/e/1FAIpQLSc9vBdB9inxrSmprhU-DZVbBvI_A6FLqg8I5ucvU2TUtCwt4w/viewform"
